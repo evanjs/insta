@@ -676,10 +676,14 @@ impl<'a> SnapshotAssertionContext<'a> {
             && self.tool_config.output_behavior() != OutputBehavior::Nothing
             && !self.is_doctest
         {
-            println!(
-                "{hint}",
-                hint = style("To update snapshots run `cargo insta review`").dim(),
-            );
+            // `INSTA_UPDATE=always` only bypasses review for file snapshots;
+            // inline snapshots always go through a pending file.
+            let hint = if self.snapshot_file.is_some() {
+                "To update snapshots run `cargo insta review` or set `INSTA_UPDATE=always`"
+            } else {
+                "To update snapshots run `cargo insta review`"
+            };
+            println!("{hint}", hint = style(hint).dim());
         }
 
         if update_result != SnapshotUpdateBehavior::InPlace && !self.tool_config.force_pass() {
@@ -702,6 +706,7 @@ impl<'a> SnapshotAssertionContext<'a> {
                     glob_collector.failed += 1;
                     if update_result == SnapshotUpdateBehavior::NewFile
                         && self.tool_config.output_behavior() != OutputBehavior::Nothing
+                        && self.snapshot_file.is_some()
                     {
                         glob_collector.show_insta_hint = true;
                     }
